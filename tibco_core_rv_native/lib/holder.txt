@@ -1,3 +1,3 @@
 Add these jars from your installation
 
-tibrvnative.jar
+tibrvnativesd.jar
