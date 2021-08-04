@@ -6,7 +6,6 @@ import com.newrelic.api.agent.MessageProduceParameters;
 import com.newrelic.api.agent.NewRelic;
 import com.newrelic.api.agent.Trace;
 import com.newrelic.api.agent.TracedMethod;
-import com.newrelic.api.agent.TransactionNamePriority;
 import com.newrelic.api.agent.weaver.MatchType;
 import com.newrelic.api.agent.weaver.Weave;
 import com.newrelic.api.agent.weaver.Weaver;
@@ -20,7 +19,8 @@ public abstract class TibrvTransport {
 	@Trace
 	public void send(TibrvMsg tibrvMsg) throws TibrvException {
 		String name = getName(this);
-		if (!NRUtils.ignore(name)) {
+		String sendSubject = tibrvMsg.getSendSubject();
+		if (!NRUtils.ignore(name) && !NRUtils.ignoreSubject(sendSubject)) {
 			if(name.matches(NRUtils.ADMINREGEX)) {
 				name = "INBOX";
 			}
@@ -28,9 +28,6 @@ public abstract class TibrvTransport {
 			MessageProduceParameters params = MessageProduceParameters.library("TibcoRV").destinationType(DestinationType.NAMED_QUEUE).destinationName(tibrvMsg.getSendSubject()).outboundHeaders(wrapper).build();
 			NewRelic.getAgent().getTracedMethod().reportAsExternal(params);
 			NewRelic.getAgent().getTracedMethod().setMetricName(new String[] { "TibrvTransport", name, "send" });
-			NewRelic.getAgent().getTransaction().setTransactionName(TransactionNamePriority.FRAMEWORK_HIGH, true, "TibrvTransport",new String[] { "TibrvTransport", name, "send" });
-		} else {
-			NewRelic.getAgent().getTransaction().ignore();
 		}
 		Weaver.callOriginal();
 	}
@@ -43,15 +40,12 @@ public abstract class TibrvTransport {
 				name = "INBOX";
 			}
 			NewRelic.getAgent().getTracedMethod().setMetricName(new String[] { "TibrvTransport", name, "sendReply" });
-			NewRelic.getAgent().getTransaction().setTransactionName(TransactionNamePriority.FRAMEWORK_HIGH, true, "TibrvTransport", new String[] { "TibrvTransport", name, "sendReply" });
 			InboundWrapper wrapper = new InboundWrapper(tibrvMsg1);
 			TracedMethod traced = NewRelic.getAgent().getTracedMethod();
 			MessageConsumeParameters params = MessageConsumeParameters.library("TibcoRV").destinationType(DestinationType.NAMED_QUEUE).destinationName(name).inboundHeaders(wrapper).build();
 			traced.reportAsExternal(params);
 			OutboundWrapper wrapper2 = new OutboundWrapper(tibrvMsg2);
 			traced.addOutboundRequestHeaders(wrapper2);
-		} else {
-			NewRelic.getAgent().getTransaction().ignore();
 		}
 		Weaver.callOriginal();
 	}
@@ -64,11 +58,8 @@ public abstract class TibrvTransport {
 				name = "INBOX";
 			}
 			NewRelic.getAgent().getTracedMethod().setMetricName(new String[] {"TibrvTransport",name,"sendRequest"});
-			NewRelic.getAgent().getTransaction().setTransactionName(TransactionNamePriority.FRAMEWORK_HIGH,true,"TibrvTransport",new String[] {"TibrvTransport",name,"sendRequest"});
 			OutboundWrapper wrapper = new OutboundWrapper(tibrvMsg);
 			NewRelic.getAgent().getTracedMethod().addOutboundRequestHeaders(wrapper);
-		} else {
-			NewRelic.getAgent().getTransaction().ignore();
 		}
 		return Weaver.callOriginal();		
 	}
