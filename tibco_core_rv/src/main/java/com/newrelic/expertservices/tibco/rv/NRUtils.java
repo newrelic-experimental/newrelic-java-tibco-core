@@ -130,7 +130,6 @@ public class NRUtils implements AgentConfigListener {
 			if(name.equalsIgnoreCase(qName)) return true;
 			if(name.matches(qName)) return true;
 		}
-		if(!trackAdminQueues && name.startsWith(ADMINSTART)) return true;
 		return false;
 	}
 
@@ -138,6 +137,7 @@ public class NRUtils implements AgentConfigListener {
 		if(!initialized) {
 			initialize();
 		}
+		if(!trackAdminQueues && name.contains(ADMINSTART)) return true;
 		for(int i=0;i<subjectIgnores.size();i++) {
 			String subject = subjectIgnores.get(i);
 			if(name.equalsIgnoreCase(subject)) return true;
@@ -175,6 +175,12 @@ public class NRUtils implements AgentConfigListener {
 				subjectIgnores.add(token);
 			}
 		}
+	}
+	
+	public static void main(String[] args) {
+		String inbox = "_INBOX.AC1A14E3.5FE2E006312C7.1";
+		boolean b = ignore(inbox);
+		System.out.println("value of ignore is "+b);
 	}
 	
 }

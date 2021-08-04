@@ -22,6 +22,7 @@ public abstract class TibrvMsgCallback {
 		
 		TracedMethod traced = NewRelic.getAgent().getTracedMethod();
 		String queueName = tibrvListener.getQueue().getName();
+		
 		if(!NRUtils.ignore(queueName)) {
 			if(queueName.contains(NRUtils.ADMINSTART)) {
 				queueName = NRUtils.ADMINSUB;
@@ -36,7 +37,7 @@ public abstract class TibrvMsgCallback {
 			}
 			
 			String subject = tibrvListener.getSubject();
-			if(subject != null && !subject.isEmpty()) {
+			if(subject != null && !subject.isEmpty() && !NRUtils.ignoreSubject(subject)) {
 				NewRelic.getAgent().getTransaction().setTransactionName(TransactionNamePriority.FRAMEWORK_HIGH, false, "RV", new String[] {"Tibco/RV/MsgCallback",queueName,subject});
 				traced.addRollupMetricName("Custom/Tibco/MsgCallback/"+queueName);
 				traced.setMetricName("Custom/Tibco/MsgCallback/"+queueName+"/"+subject);
