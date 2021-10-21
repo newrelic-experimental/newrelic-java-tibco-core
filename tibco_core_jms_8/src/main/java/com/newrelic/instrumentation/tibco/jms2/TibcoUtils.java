@@ -27,13 +27,9 @@ import com.newrelic.agent.config.AgentConfigListener;
 import com.newrelic.api.agent.Config;
 import com.newrelic.api.agent.DestinationType;
 import com.newrelic.api.agent.Logger;
-import com.newrelic.api.agent.MessageConsumeParameters;
 import com.newrelic.api.agent.MessageProduceParameters;
 import com.newrelic.api.agent.NewRelic;
 import com.newrelic.api.agent.Segment;
-import com.newrelic.api.agent.TracedMethod;
-import com.newrelic.api.agent.Transaction;
-import com.newrelic.api.agent.TransactionNamePriority;
 
 public class TibcoUtils implements AgentConfigListener {
 

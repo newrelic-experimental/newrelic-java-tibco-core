@@ -18,7 +18,7 @@ public abstract class TibrvMsgCallback {
 	public void onMsg(TibrvListener tibrvListener, TibrvMsg tibrvMsg) {
 		String queueName = tibrvListener.getQueue().getName();
 		if(queueName.toLowerCase().contains("_inbox")) {
-			queueName = "Temp";
+			queueName = "INBOX";
 		}
 		InboundWrapper wrapper = new InboundWrapper(tibrvMsg);
 		TracedMethod traced = NewRelic.getAgent().getTracedMethod();

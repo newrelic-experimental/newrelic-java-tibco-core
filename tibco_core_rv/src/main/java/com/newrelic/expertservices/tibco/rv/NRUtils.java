@@ -39,7 +39,7 @@ public class NRUtils implements AgentConfigListener {
 			initialize();
 		}
 		String name = queue;
-		if(queue.matches(ADMINREGEX) && !trackAdminQueues) {
+		if(queue.matches(ADMINREGEX)) {
 			if(trackAdminQueues) 
 				return ADMINSUB;
 			else
@@ -55,6 +55,7 @@ public class NRUtils implements AgentConfigListener {
 	}
 		
 	public static void initialize() {
+		if(initialized) return;
 		Map<String, Object> map = new HashMap<String, Object>();
 		Logger logger = NewRelic.getAgent().getLogger();
 		logger.log(Level.INFO, "Initializing Rendevous Ignores");
@@ -120,11 +121,14 @@ public class NRUtils implements AgentConfigListener {
 		ServiceFactory.getConfigService().addIAgentConfigListener(utils);
 		initialized = true;
 	}
-	public static boolean ignore(String name) {
+	
+	public static boolean ignore(String queueName) {
 		if(!initialized) {
 			initialize();
 		}
-		if(name == null || name.isEmpty()) return false;
+		String name = getName(queueName);
+		
+		if(name == null || name.isEmpty()) return true;
 		for(int i=0;i<transportIgnores.size();i++) {
 			String qName = transportIgnores.get(i);
 			if(name.equalsIgnoreCase(qName)) return true;
@@ -177,10 +181,4 @@ public class NRUtils implements AgentConfigListener {
 		}
 	}
 	
-	public static void main(String[] args) {
-		String inbox = "_INBOX.AC1A14E3.5FE2E006312C7.1";
-		boolean b = ignore(inbox);
-		System.out.println("value of ignore is "+b);
-	}
-	
-}
+ }
