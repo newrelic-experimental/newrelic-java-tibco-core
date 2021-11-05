@@ -14,7 +14,7 @@ import com.newrelic.api.agent.Headers;
 import com.newrelic.api.agent.NewRelic;
 
 public class TibJMSHeaders implements Headers {
-
+	
 	private Message message = null;
 	
 	public TibJMSHeaders(Message msg) {

@@ -34,7 +34,6 @@ import com.newrelic.api.agent.Segment;
 public class TibcoUtils implements AgentConfigListener {
 
 	private static final String IGNORESKEY = "TIBCO.jms.ignores";
-	
 	public static List<String> destinationIgnores;
 	
 	static {
