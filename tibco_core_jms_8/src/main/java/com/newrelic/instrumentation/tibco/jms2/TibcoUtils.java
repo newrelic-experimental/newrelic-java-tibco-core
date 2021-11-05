@@ -27,13 +27,9 @@ import com.newrelic.agent.config.AgentConfigListener;
 import com.newrelic.api.agent.Config;
 import com.newrelic.api.agent.DestinationType;
 import com.newrelic.api.agent.Logger;
-import com.newrelic.api.agent.MessageConsumeParameters;
 import com.newrelic.api.agent.MessageProduceParameters;
 import com.newrelic.api.agent.NewRelic;
 import com.newrelic.api.agent.Segment;
-import com.newrelic.api.agent.TracedMethod;
-import com.newrelic.api.agent.Transaction;
-import com.newrelic.api.agent.TransactionNamePriority;
 
 public class TibcoUtils implements AgentConfigListener {
 
@@ -167,7 +163,8 @@ public class TibcoUtils implements AgentConfigListener {
 		if(message == null || l == null || dest == null) {
 			return null;
 		}
-		MessageProduceParameters params = MessageProduceParameters.library("TibcoJMS").destinationType(getDestinationType(dest)).destinationName(getDestinationName(dest)).outboundHeaders(new OutboundWrapper(message)).build();
+		NewRelic.getAgent().getTransaction().insertDistributedTraceHeaders(new TibJMSHeaders(message));
+		MessageProduceParameters params = MessageProduceParameters.library("TibcoJMS").destinationType(getDestinationType(dest)).destinationName(getDestinationName(dest)).outboundHeaders(null).build();
 		
 		Segment segment = NewRelic.getAgent().getTransaction().startSegment(nameProducerMetric(dest));
 		segment.reportAsExternal(params);

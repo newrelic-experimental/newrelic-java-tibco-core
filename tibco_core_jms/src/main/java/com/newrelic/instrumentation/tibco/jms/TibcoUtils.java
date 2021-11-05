@@ -279,10 +279,12 @@ public class TibcoUtils implements AgentConfigListener {
 		else {
 			boolean isTempQueue = isTemp(queueName);
 			MessageProduceParameters params;
+			TibJMSHeaders headers = new TibJMSHeaders(message);
+			NewRelic.getAgent().getTransaction().insertDistributedTraceHeaders(headers);
 			if(isTempQueue) {
-				params = MessageProduceParameters.library("TibcoJMS").destinationType(DestinationType.TEMP_QUEUE).destinationName("Temp").outboundHeaders(message == null ? null : new OutboundWrapper(message)).build();
+				params = MessageProduceParameters.library("TibcoJMS").destinationType(DestinationType.TEMP_QUEUE).destinationName("Temp").outboundHeaders(null).build();
 			} else {
-				params = MessageProduceParameters.library("TibcoJMS").destinationType(DestinationType.NAMED_QUEUE).destinationName(queueName).outboundHeaders(message == null ? null : new OutboundWrapper(message)).build();
+				params = MessageProduceParameters.library("TibcoJMS").destinationType(DestinationType.NAMED_QUEUE).destinationName(queueName).outboundHeaders(null).build();
 			}
 			tracer.reportAsExternal(params);
 			saveMessageParameters(message);
@@ -297,7 +299,8 @@ public class TibcoUtils implements AgentConfigListener {
 			NewRelic.getAgent().getLogger().log(Level.FINER, "processSendMessage(): no tracer", new Object[0]);
 		}
 		else {
-			MessageProduceParameters params = MessageProduceParameters.library("TibcoJMS").destinationType(getDestinationType(dest)).destinationName(getDestinationName(dest)).outboundHeaders(message == null ? null : new OutboundWrapper(message)).build();
+			NewRelic.getAgent().getTransaction().insertDistributedTraceHeaders(new TibJMSHeaders(message));
+			MessageProduceParameters params = MessageProduceParameters.library("TibcoJMS").destinationType(getDestinationType(dest)).destinationName(getDestinationName(dest)).outboundHeaders(null).build();
 			tracer.reportAsExternal(params);
 			saveMessageParameters(message);
 		}
