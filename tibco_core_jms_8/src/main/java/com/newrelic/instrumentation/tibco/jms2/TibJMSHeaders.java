@@ -34,6 +34,7 @@ public class TibJMSHeaders implements Headers {
 		} catch (JMSException e) {
 			NewRelic.getAgent().getLogger().log(Level.FINE, e, "Error getting property ({0}) from JMS message.", new Object[] { name });
 		}
+
 		return null;
 	}
 
