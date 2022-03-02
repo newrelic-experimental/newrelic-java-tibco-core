@@ -1,3 +1,0 @@
-Add these jars from your installation
-
-tibjms.jar
