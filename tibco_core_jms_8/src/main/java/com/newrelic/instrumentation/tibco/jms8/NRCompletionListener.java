@@ -1,4 +1,4 @@
-package com.newrelic.instrumentation.tibco.jms2;
+package com.newrelic.instrumentation.tibco.jms8;
 
 import javax.jms.CompletionListener;
 import javax.jms.Message;

@@ -1,4 +1,4 @@
-package com.newrelic.instrumentation.tibco.jms2;
+package com.newrelic.instrumentation.tibco.jms6;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,7 +13,7 @@ import com.newrelic.api.agent.HeaderType;
 import com.newrelic.api.agent.Headers;
 import com.newrelic.api.agent.NewRelic;
 
-public class TibJMSHeaders implements Headers{
+public class TibJMSHeaders implements Headers {
 	
 	private Message message = null;
 	
@@ -32,7 +32,7 @@ public class TibJMSHeaders implements Headers{
 		try {
 			return message.getStringProperty(name);
 		} catch (JMSException e) {
-			NewRelic.getAgent().getLogger().log(Level.FINE, e, "Error getting property ({0}) from JMS message.", new Object[] { name });
+			NewRelic.getAgent().getLogger().log(Level.FINEST, e, "Error getting property ({0}) from JMS message.", new Object[] { name });
 		}
 		return null;
 	}

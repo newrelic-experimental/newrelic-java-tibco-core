@@ -1,4 +1,4 @@
-package com.newrelic.instrumentation.tibco.jms2;
+package com.newrelic.instrumentation.tibco.jms8;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -27,14 +27,19 @@ import com.newrelic.agent.config.AgentConfigListener;
 import com.newrelic.api.agent.Config;
 import com.newrelic.api.agent.DestinationType;
 import com.newrelic.api.agent.Logger;
+import com.newrelic.api.agent.MessageConsumeParameters;
 import com.newrelic.api.agent.MessageProduceParameters;
 import com.newrelic.api.agent.NewRelic;
 import com.newrelic.api.agent.Segment;
+import com.newrelic.api.agent.TracedMethod;
+import com.newrelic.api.agent.Transaction;
+import com.newrelic.api.agent.TransactionNamePriority;
 
 public class TibcoUtils implements AgentConfigListener {
 
 	private static final String IGNORESKEY = "TIBCO.jms.ignores";
 	public static List<String> destinationIgnores;
+	private static boolean initialized = false;
 	
 	static {
 		initializeIgnores();
@@ -59,9 +64,13 @@ public class TibcoUtils implements AgentConfigListener {
 			map.put("JMSIgnoresString", ignoresStr == null ? "null" : "empty");
 		}
 
+		initialized = true;
 	}
 	
 	public static boolean ignore(Destination dest) {
+		if(!initialized) {
+			initializeIgnores();
+		}
 		if(dest instanceof Queue) {
 			Queue queue = (Queue)dest;
 			try {
@@ -158,6 +167,21 @@ public class TibcoUtils implements AgentConfigListener {
 		return metricName;
 	}
 	
+	public static void processSendMessage(Message message, Destination dest, TracedMethod tracer) {
+		if (message == null) {
+			NewRelic.getAgent().getLogger().log(Level.FINER, "processSendMessage(): message is null", new Object[0]);
+		} else if (tracer == null)
+		{
+			NewRelic.getAgent().getLogger().log(Level.FINER, "processSendMessage(): no tracer", new Object[0]);
+		}
+		else {
+			NewRelic.getAgent().getTransaction().insertDistributedTraceHeaders(new TibJMSHeaders(message));
+			MessageProduceParameters params = MessageProduceParameters.library("TibcoJMS").destinationType(getDestinationType(dest)).destinationName(getDestinationName(dest)).outboundHeaders(null).build();
+			tracer.reportAsExternal(params);
+			saveMessageParameters(message);
+		}
+	}
+	
 	public static NRCompletionListener processSendMessage(Message message, CompletionListener l, Destination dest) {
 		
 		if(message == null || l == null || dest == null) {
@@ -195,6 +219,113 @@ public class TibcoUtils implements AgentConfigListener {
 		return destName;
 	}
 	
+	public static void processInbound(Message message, Destination destination, TracedMethod traced, Transaction txn) {
+		if(message == null) return;
+		
+		if(ignore(destination)) return;
+		
+		nameTransaction(destination,txn);
+		nameConsumerMetric(destination);
+		
+		if(destination instanceof Queue) {
+			Queue queue = (Queue)destination;
+			String queueName = null;
+			try {
+				queueName = queue.getQueueName();
+			} catch (JMSException e) {
+			}
+			processQueueConsume(message, queueName, traced);
+		} else if(destination instanceof Topic) {
+			Topic topic = (Topic)destination;
+			String topicName = null;
+			try {
+				topicName = topic.getTopicName();
+			} catch (JMSException e) {
+			}
+			processTopicConsume(message, topicName, traced);
+		}
+	}
+	
+	public static String nameConsumerMetric(Destination dest) {
+		return nameMetric(dest, "Consume");
+	}
+
+    public static void processQueueConsume(Message message, String queueName, TracedMethod tracer) {
+        if (message == null) {
+            NewRelic.getAgent().getLogger().log(Level.FINER, "JMS processConsume: message is null");
+            return;
+        }
+
+        try {
+            if(queueName == null || queueName.isEmpty()) {
+            	queueName = getDestinationName(message.getJMSDestination());
+            }
+            MessageConsumeParameters params = null;
+            if(isTemp(queueName)) {
+                params = MessageConsumeParameters.library("TibcoJMS").destinationType(DestinationType.TEMP_QUEUE).destinationName("Temp").inboundHeaders(null).build();
+            } else {
+                params = MessageConsumeParameters.library("TibcoJMS").destinationType(DestinationType.NAMED_QUEUE).destinationName(queueName).inboundHeaders(null).build();
+            }
+            tracer.reportAsExternal(params);
+        } catch (JMSException exception) {
+            NewRelic.getAgent().getLogger().log(Level.FINE, exception,
+                    "Unable to record metrics for JMS message consume.");
+        }
+    }
+
+    public static void processTopicConsume(Message message, String topicName, TracedMethod tracer) {
+        if (message == null) {
+            NewRelic.getAgent().getLogger().log(Level.FINER, "JMS processConsume: message is null");
+            return;
+        }
+
+        try {
+            if(topicName == null || topicName.isEmpty()) {
+            	topicName = getDestinationName(message.getJMSDestination());
+            }
+            MessageConsumeParameters params = null;
+            if(isTemp(topicName)) {
+                params = MessageConsumeParameters.library("TibcoJMS").destinationType(DestinationType.TEMP_TOPIC).destinationName("Temp").inboundHeaders(null).build();
+            } else {
+                params = MessageConsumeParameters.library("TibcoJMS").destinationType(DestinationType.NAMED_TOPIC).destinationName(topicName).inboundHeaders(null).build();
+            }
+            tracer.reportAsExternal(params);
+        } catch (JMSException exception) {
+            NewRelic.getAgent().getLogger().log(Level.FINE, exception,
+                    "Unable to record metrics for JMS message consume.");
+        }
+    }
+
+	public static void nameTransaction(Destination dest,Transaction transaction) {
+		try {
+			if ((dest instanceof Queue)) {
+				Queue queue = (Queue)dest;
+				if ((queue instanceof TemporaryQueue) || isTemp(queue.getQueueName())) {
+					transaction.setTransactionName(TransactionNamePriority.FRAMEWORK_LOW, false, "Message", new String[] { "JMS/Queue/Temp" });
+				}
+				else {
+					transaction.setTransactionName(TransactionNamePriority.FRAMEWORK_HIGH, false, "Message", new String[] { "JMS/Queue/Named", queue.getQueueName() });
+				}
+			}
+			else if ((dest instanceof Topic)) {
+				Topic topic = (Topic)dest;
+				if ((topic instanceof TemporaryTopic) || isTemp(topic.getTopicName())) {
+					transaction.setTransactionName(TransactionNamePriority.FRAMEWORK_LOW, false, "Message", new String[] { "JMS/Topic/Temp" });
+				}
+				else
+					transaction.setTransactionName(TransactionNamePriority.FRAMEWORK_HIGH, false, "Message", new String[] { "JMS/Topic/Named", topic.getTopicName() });
+			}
+			else
+			{
+				NewRelic.getAgent().getLogger().log(Level.FINE, "Error naming JMS transaction: Invalid Message Type.", new Object[0]);
+			}
+		} catch (JMSException e) {
+			NewRelic.getAgent().getLogger().log(Level.FINE, e, "Error naming JMS transaction", new Object[0]);
+		}
+
+	}
+
+
 	@Override
 	public void configChanged(String category, AgentConfig config) {
 		String ignoresStr = (String)config.getValue(IGNORESKEY);

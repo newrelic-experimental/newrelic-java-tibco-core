@@ -4,58 +4,48 @@ import javax.jms.CompletionListener;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
-import javax.jms.MessageProducer;
 
+import com.newrelic.api.agent.NewRelic;
 import com.newrelic.api.agent.Trace;
-import com.newrelic.api.agent.weaver.MatchType;
+import com.newrelic.api.agent.TracedMethod;
 import com.newrelic.api.agent.weaver.Weave;
 import com.newrelic.api.agent.weaver.Weaver;
-import com.newrelic.instrumentation.tibco.jms2.NRCompletionListener;
-import com.newrelic.instrumentation.tibco.jms2.TibcoUtils;
+import com.newrelic.instrumentation.tibco.jms8.NRCompletionListener;
+import com.newrelic.instrumentation.tibco.jms8.TibcoUtils;
 
-@Weave(type=MatchType.BaseClass)
-public abstract class TibjmsMessageProducer implements MessageProducer, TibjmsxConst {
+@Weave
+public abstract class TibjmsMessageProducer {
 
 	public abstract Destination getDestination() throws JMSException;
 
-	
-	@Trace
-	public void send(Message message, int var2, int var3, long var4, CompletionListener var6) {
-		Destination useDest = null;
+	@Trace(leaf = true)
+	TibjmsMessage _publish(Destination destination, Message message, boolean var3, int var4, int var5, long var6, boolean var8,CompletionListener listener) {
+
 		try {
-			useDest = getDestination();
-			if(useDest == null) {
-				useDest = message.getJMSDestination();
+			Destination destToUse;
+
+			if(destination != null) {
+				destToUse = destination;
+			} else {
+				destToUse = getDestination();
+			}
+			if (destToUse != null && !TibcoUtils.ignore(destToUse)) {
+				TracedMethod tracedMethod = NewRelic.getAgent().getTracedMethod();
+				String metricName = TibcoUtils.nameProducerMetric(destination);
+				tracedMethod.setMetricName(metricName);
+				if(listener == null) {
+					TibcoUtils.processSendMessage(message, destToUse, tracedMethod);
+				} else {
+					NRCompletionListener wrapper = TibcoUtils.processSendMessage(message, listener, destToUse);
+					if(wrapper != null) {
+						listener = wrapper;
+					}
+				}
+				TibcoUtils.saveMessageParameters(message);
 			}
 		} catch (JMSException e) {
 		}
-		if (useDest != null && !TibcoUtils.ignore(useDest)) {
-			NRCompletionListener wrapper = TibcoUtils.processSendMessage(message, var6, useDest);
-			if(wrapper != null) {
-				var6 = wrapper;
-			}
-			TibcoUtils.saveMessageParameters(message);
-		}
-		Weaver.callOriginal();
+		return Weaver.callOriginal();
 	}
-	
-	@Trace
-	public void send(Message message, CompletionListener var2) {
-		Destination useDest = null;
-		try {
-			useDest = getDestination();
-			if(useDest == null) {
-				useDest = message.getJMSDestination();
-			}
-		} catch (JMSException e) {
-		}
-		if (useDest != null && !TibcoUtils.ignore(useDest)) {
-			NRCompletionListener wrapper = TibcoUtils.processSendMessage(message, var2, useDest);
-			if(wrapper != null) {
-				var2 = wrapper;
-			}
-			TibcoUtils.saveMessageParameters(message);
-		}
-		Weaver.callOriginal();
-	}
+
 }
