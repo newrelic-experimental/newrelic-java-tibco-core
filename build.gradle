@@ -17,12 +17,12 @@ buildscript {
 }
 
 plugins {
-  id "de.undercouch.download" version "1.2"
+  id "de.undercouch.download" version "5.0.0"
 }
 
 project.ext {
   group = 'com.newrelic.instrumentation.labs'
-  javaAgentVersion = '6.0.0'
+  javaAgentVersion = '8.4.0'
 
   // Aligned with minimum Java major version supported by latest Java Agent
   javaVersion = JavaVersion.VERSION_1_8
@@ -76,7 +76,7 @@ task buildIfNeeded {
 task createModule {
   dependsOn checkForDependencies
   description = 'Generate project files for a new instrumentation module'
-  group = 'New Relic Labs'
+  group = 'New Relic'
   doLast {
 
     def rootProject = projectDir.path
@@ -119,10 +119,9 @@ task createModule {
            // Example:
            // implementation 'javax.servlet:servlet-api:2.5'
 
-           // New Relic Labs Java Agent dependencies
-           implementation 'com.newrelic.agent.java:newrelic-agent:JAVA_AGENT_VERSION'
-           implementation 'com.newrelic.agent.java:newrelic-api:JAVA_AGENT_VERSION'
+           // New Relic Java Agent dependencies
            implementation fileTree(include: ['*.jar'], dir: '../libs')
+           implementation fileTree(include: ['*.jar'], dir: 'lib')
            implementation fileTree(include: ['*.jar'], dir: '../test-lib')
         }
 
@@ -175,14 +174,14 @@ subprojects {
 
   task install(dependsOn: buildIfNeeded, type: Copy) {
     description = 'Copies compiled jar to the NEW_RELIC_EXTENSIONS_DIR.'
-    group  = 'New Relic Labs'
+    group  = 'New Relic'
 
     def extDir = System.getenv("NEW_RELIC_EXTENSIONS_DIR") ?: " "
 
     from jar
     into extDir
   }
-  
+
   compileJava.doFirst {
     tasks.findByName('checkForDependencies')
   }

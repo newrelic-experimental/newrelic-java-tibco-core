@@ -1,5 +1,5 @@
 rootProject.name = 'java-instrumentation-template'
-include 'tibco_core_jms'
+include 'tibco_core_jms_6'
 include 'tibco_core_jms_8'
 include 'tibco_core_rv'
 include 'tibco_core_rv_native'
